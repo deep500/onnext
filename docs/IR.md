@@ -156,11 +156,21 @@ Graphs have the following properties:
 |---|---|---|
 name|string|The name of the model graph.
 node|Node[]|A list of nodes, forming a partially ordered computation graph based on input/output data dependencies.
-initializer|Tensor[]|A list of named tensor values. When an initializer has the same name as a graph input, it specifies a default value for that input. When an initializer has a name different from all graph inputs, it specifies a constant value.
+initializer|InitializerType[]|A list of initializers. The initializer can either be a named tensor or a graph indicating the computation to initialize the tensor. When an initializer has the same name as a graph input, it specifies a default value for that input. When an initializer has a name different from all graph inputs, it specifies a constant value.
 doc_string|string|A human-readable documentation for this model. Markdown is allowed.
 input|ValueInfo[]|The input “parameters” of the graph, possibly initialized by a default value found in ‘initializer.’
 output|ValueInfo[]|The output parameters of the graph. Once all output parameters have been written to by a graph execution, the execution is complete.
 value_info|ValueInfo[]|Used to store the type and shape information of values that are not inputs or outputs.
+
+The initializer format is of the type:
+```
+message InitializerType {
+  oneof value {
+    Tensor values = 1;
+    Graph initializer_graph = 2;
+  };
+}
+```
 
 Each graph MUST define the names and types of its inputs and outputs, which are specified as ‘value info’ structures, having the following properties:
 
@@ -336,6 +346,7 @@ Which is referenced by the Tensor type message:
   message Tensor {
     optional TensorProto.DataType elem_type = 1;
     optional TensorShapeProto shape = 2;
+    optional bool trainable = 3;
   }
 ```
 

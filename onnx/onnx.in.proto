@@ -281,8 +281,9 @@ message GraphProto {
 
   // A list of named tensor values, used to specify constant inputs of the graph.
   // Each TensorProto entry must have a distinct name (within the list) that
-  // MAY also appear in the input list.
-  repeated TensorProto initializer = 5;
+  // MAY also appear in the input list. todo: change InitializerTypeProto description
+  repeated InitializerTypeProto initializer = 5;
+  // repeated TensorProto initializer = 5;
 
   // Initializers (see above) stored in sparse format.
   repeated SparseTensorProto sparse_initializer = 15;
@@ -311,6 +312,16 @@ message GraphProto {
   // optional int64 producer_version = 7;
   // optional string producer_tag = 8;
   // optional string domain = 9;
+}
+
+//InitializerType
+//
+//Subgraph producing Initializer Tensors or Initializer Tensors explicitly
+message InitializerTypeProto {
+  oneof value {
+    TensorProto values = 1;
+    GraphProto initializer_graph = 2;
+  };
 }
 
 // Tensors

@@ -9,99 +9,82 @@ from onnx import ModelProto, ValueInfoProto
 
 import onnx.checker
 
-def instantiate_batch_size(model, inputs, outputs, batch_size):   # type: (ModelProto, Dict[Text, int], Dict[Text, int], int) -> ModelProto
+def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, output_dim: Dict[int, Any] = {}):
+    # needs to hold: dim-index to be updated MUST be the same for all inputs AND outputs. Assumes dim_value = 0 invalid.
+    # can set arbitrary values for arbitrary dimensions!
     """
-    This function instantiates inputs / outputs of model with corresponding value.
+    The difference to update_inputs_outputs_dims() is that no complete input and output dictionary needs to be provided.
 
-    :param model: Model with abstract batch size
-    :param inputs: Dictionary of input node names and zero-based Dimension index to parametrize
-    :param outputs: Dictionary of output node names and zero-based Dimension index to parametrize
-    :param batch_size: integer to be set for batch_size
-    :return: model with batch_size as batch size
+    :param model: Onnx Protobuf model to be modified
+    :param input_dim: Dictionary of zero based dimension indices and corresponding values to be set. -1 for unique dim_param
+    :param output_dim: Dictionary of zero based dimension indices and corresponding values to be set. -1 for unique dim_param
+    :return: model with modified inputs and outputs
     """
-    for name, val in inputs.items():
-        for input in model.graph.input:
-            if input.name != name:
-                continue
-            if len(input.type.tensor_type.shape.dim) <= val:
-                raise ValueError('dimension {} to be changed out of bounds ' .format(name))
-            dim = input.type.tensor_type.shape.dim[val]
-            if dim.HasField('dim_value'):
-                raise ValueError('input {} already has value {} as first dimension '.format(input.name, dim.dim_value))
-            else:
-                dim.dim_value = batch_size
+    if not (bool(input_dim) and bool(output_dim)):
+        return model
+    # filter for true inputs
+    inputs = set(i.name for i in model.graph.input)
+    initializers = set(i.name for i in model.graph.initializer)
+    inputs = inputs - initializers
 
-    for name, val in outputs.items():
-        for output in model.graph.output:
-            if output.name != name:
-                continue
-            if len(input.type.tensor_type.shape.dim) <= val:
-                raise ValueError('dimension {} to be changed out of bounds ' .format(name))
-            dim = output.type.tensor_type.shape.dim[val]
-            if dim.HasField('dim_value'):
-                raise ValueError('input {} already has value {} as first dimension '.format(output.name, dim.dim_value))
-            else:
-                dim.dim_value = batch_size
-    onnx.checker.check_model(model)
-    return model
+    outputs = model.graph.output
 
-def abstract_batch_size(model, inputs, outputs):   # type: (ModelProto, Dict[Text, int], Dict[Text, int]) -> ModelProto
-    """
-    This function abstracts concrete batch sizes of input / output node in dimension val
-    into a unique dim_param. Raises Error if batch size is parametric.
+    # create dict of abstracted inputs
+    inp = {}
+    for i in inputs:
+        i = [j for j in model.graph.input if j.name == i][0]
+        dimensions = i.type.tensor_type.shape.dim
 
-    :param model: Model whos inputs / outputs will be altered
-    :param inputs: Dictionary of input node names and zero-based Dimension index to parametrize
-    :param outputs: Dictionary of output node names and zero-based Dimension index to parametrize
-    :return: Model with abstract batch size
-    """
+        ls = []
 
-    dim_param_set = set()
+        if len(input_dim) == 0:
+            inp[i.name] = ls
+            continue
 
-    def init_dim_param_set(dim_param_set, value_infos):  # type: (Set[Text], List[ValueInfoProto]) -> None
-        for info in value_infos:
-            shape = info.type.tensor_type.shape
-            for dim in shape.dim:
-                if dim.HasField('dim_param'):
-                    dim_param_set.add(dim.dim_param)  # type: ignore
+        for d in dimensions:
+            if d.HasField('dim_param'):
+                ls.append(d.dim_param)
+            if d.HasField('dim_value'):
+                ls.append(d.dim_value)
 
-    init_dim_param_set(dim_param_set, model.graph.input)  # type: ignore
-    init_dim_param_set(dim_param_set, model.graph.output)  # type: ignore
-    init_dim_param_set(dim_param_set, model.graph.value_info)  # type: ignore
+        if len(input_dim) == 0:
+            inp[i.name] = []
+            continue
 
-    param_name = 'batch_size'
+        if len(ls) <= max(input_dim.keys()):
+            ValueError('Input {} has only {} Dimensions, less than {} that are given' .format(i.name, len(ls), max(input_dim.keys())))
 
-    i = 0
-    while param_name in dim_param_set:
-        param_name = param_name + '_' + str(i)
-        i = i + 1
+        for k in input_dim.keys():
+            ls[k] = input_dim[k]
 
-    for name, val in inputs.items():
-        for input in model.graph.input:
-            if input.name != name:
-                continue
-            if len(input.type.tensor_type.shape.dim) <= val:
-                raise ValueError('dimension {} to be changed out of bounds ' .format(name))
-            dim = input.type.tensor_type.shape.dim[val]
-            if dim.HasField('dim_param'):
-                raise ValueError('input {} already has parameter {} as first dimension '.format(input.name, dim.dim_param))
-            else:
-                dim.dim_param = param_name
+        inp[i.name] = ls
 
-    for name, val in outputs.items():
-        for output in model.graph.output:
-            if output.name != name:
-                continue
-            if len(input.type.tensor_type.shape.dim) <= val:
-                raise ValueError('dimension {} to be changed out of bounds ' .format(name))
-            dim = output.type.tensor_type.shape.dim[val]
-            if dim.HasField('dim_param'):
-                raise ValueError('input {} already has parameter {} as first dimension '.format(output.name, dim.dim_param))
-            else:
-                dim.dim_param = param_name
-    onnx.checker.check_model(model)
-    return model
+    # create dict of abstracted outputs
+    out = {}
+    for o in outputs:
+        dimensions = o.type.tensor_type.shape.dim
 
+        ls = []
+
+        if len(output_dim) == 0:
+            out[o.name] = ls
+            continue
+
+        for d in dimensions:
+            if d.HasField('dim_param'):
+                ls.append(d.dim_param)
+            if d.HasField('dim_value'):
+                ls.append(d.dim_value)
+
+        if len(ls) <= max(output_dim.keys()):
+            ValueError('Input {} has only {} Dimensions, less than {} that are given'.format(o.name, len(ls),
+                                                                                             max(output_dim.keys())))
+        for k in output_dim.keys():
+            ls[k] = output_dim[k]
+
+        out[o.name] = ls
+
+    return update_inputs_outputs_dims(model, inp, out)
 
 def update_inputs_outputs_dims(model, input_dims, output_dims):  # type: (ModelProto, Dict[Text, List[Any]], Dict[Text, List[Any]]) -> ModelProto
     """

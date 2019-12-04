@@ -39,8 +39,7 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
         ls = []
 
         if len(input_dim) == 0:
-            inp[i.name] = ls
-            continue
+            break
 
         for d in dimensions:
             if d.HasField('dim_param'):
@@ -68,8 +67,7 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
         ls = []
 
         if len(output_dim) == 0:
-            out[o.name] = ls
-            continue
+            break
 
         for d in dimensions:
             if d.HasField('dim_param'):

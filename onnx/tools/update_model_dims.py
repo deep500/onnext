@@ -47,10 +47,6 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
             if d.HasField('dim_value'):
                 ls.append(d.dim_value)
 
-        if len(input_dim) == 0:
-            inp[i.name] = []
-            continue
-
         if len(ls) <= max(input_dim.keys()):
             ValueError('Input {} has only {} Dimensions, less than {} that are given' .format(i.name, len(ls), max(input_dim.keys())))
 

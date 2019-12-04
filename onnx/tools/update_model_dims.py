@@ -14,6 +14,7 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
     # can set arbitrary values for arbitrary dimensions!
     """
     The difference to update_inputs_outputs_dims() is that no complete input and output dictionary needs to be provided.
+    also, only the dimension indices need to be provided, no knowledge of exact input names is needed.
 
     :param model: Onnx Protobuf model to be modified
     :param input_dim: Dictionary of zero based dimension indices and corresponding values to be set. -1 for unique dim_param

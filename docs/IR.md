@@ -172,7 +172,7 @@ message InitializerType {
 }
 ```
 
-Each graph MUST define the names and types of its inputs and outputs, which are specified as ‘value info’ structures, having the following properties:
+Each main (top-level) graph MUST define the names and types of its inputs and outputs, which are specified as ‘value info’ structures, having the following properties:
 
 Name|Type|Description
 |---|---|---|
@@ -349,7 +349,6 @@ Which is referenced by the Tensor type message:
   message Tensor {
     optional TensorProto.DataType elem_type = 1;
     optional TensorShapeProto shape = 2;
-    optional bool trainable = 3;
   }
 ```
 

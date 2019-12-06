@@ -90,7 +90,11 @@ enum Version {
   // - Add support for sparse tensor constants stored in model.
   //   - Add message SparseTensorProto
   //   - Add sparse initializers
-  IR_VERSION = 0x0000000000000006;
+  IR_VERSION_2019_9_19 = 0x0000000000000006;
+
+  // IR Version 7 published on ...
+  // changed graph initializer
+  IR_VERSION = 0x0000000000000007;
 }
 
 // Attributes

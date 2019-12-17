@@ -26,7 +26,7 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
     # filter for true inputs
     inputs = set(i.name for i in model.graph.input)
     initializers = set(i.name for i in model.graph.initializer)
-    inputs = inputs - initializers
+    graph_inputs = inputs - initializers
 
     outputs = model.graph.output
 
@@ -50,8 +50,9 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
         if len(ls) <= max(input_dim.keys()):
             ValueError('Input {} has only {} Dimensions, less than {} that are given' .format(i.name, len(ls), max(input_dim.keys())))
 
-        for k in input_dim.keys():
-            ls[k] = input_dim[k]
+        if i.name in graph_inputs:
+            for k in input_dim.keys():
+                ls[k] = input_dim[k]
 
         inp[i.name] = ls
 

@@ -17,22 +17,24 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
     also, only the dimension indices need to be provided, no knowledge of exact input names is needed.
 
     :param model: Onnx Protobuf model to be modified
-    :param input_dim: Dictionary of zero based dimension indices and corresponding values to be set. -1 for unique dim_param
-    :param output_dim: Dictionary of zero based dimension indices and corresponding values to be set. -1 for unique dim_param
+    :param input_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique dim_param
+    :param output_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique dim_param
     :return: model with modified inputs and outputs
     """
     if not (bool(input_dim) and bool(output_dim)):
         return model
-    # filter for true inputs
+
+    # separate graph inputs from initializers from graph.input set
     inputs = set(i.name for i in model.graph.input)
     initializers = set(i.name for i in model.graph.initializer)
     graph_inputs = inputs - initializers
 
     outputs = model.graph.output
 
-    # create dict of abstracted inputs
+    # create complete dictionary of input dimensions. only Graph inputs are modified as specified in input_dim
     inp = {}
     for i in inputs:
+        # gather input i, inputs only contains strings
         i = [j for j in model.graph.input if j.name == i][0]
         dimensions = i.type.tensor_type.shape.dim
 
@@ -47,16 +49,18 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, ou
             if d.HasField('dim_value'):
                 ls.append(d.dim_value)
 
-        if len(ls) <= max(input_dim.keys()):
-            ValueError('Input {} has only {} Dimensions, less than {} that are given' .format(i.name, len(ls), max(input_dim.keys())))
-
+        # only change graph_input dimensions
         if i.name in graph_inputs:
+            # throw error in case specified dimension is too large (not existent in input)
+            if len(ls) <= max(input_dim.keys()):
+                ValueError('Input {} has only {} Dimensions, less than {} that are given'.format(i.name, len(ls),
+                                                                                                 max(input_dim.keys())))
             for k in input_dim.keys():
                 ls[k] = input_dim[k]
 
         inp[i.name] = ls
 
-    # create dict of abstracted outputs
+    # create complete dictionary of output dimensions. All outputs are considered to be Graph outputs
     out = {}
     for o in outputs:
         dimensions = o.type.tensor_type.shape.dim

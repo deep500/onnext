@@ -16,26 +16,24 @@ def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Union[int,str
     to be provided.
 
         Example. if we have the following shape for inputs and outputs:
-                shape(input_1) = (128, 3, 64, 64)
-                shape(input_2) = (128, 4)
+                shape(input_1) = (128, 'l', 64, 64)
+                shape(input_2) = (128, 'w')
                 and shape(output)  = (128, 'c', 5)
 
                 The parameters can be provided as:
                 input_dim = {
                     0: 'b',
-                    1: 64
-                    }
+                    1: 20
+                }
 
                 output_dim = {
                     0: -1
-                    }
+                }
 
                 producing following result:
-                shape(input_1) = ('b', 64, 64, 64)
-                shape(input_2) = ('b', 64)
+                shape(input_1) = ('b', 20, 64, 64)
+                shape(input_2) = ('b', 20)
                 and shape(output)  = ('output.0', 'c', 5)
-
-
 
     :param model: Onnx Protobuf model to be modified
     :param input_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique string

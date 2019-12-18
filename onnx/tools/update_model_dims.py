@@ -4,21 +4,41 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from six import string_types
-from typing import Any, List, Text, Dict, Set
+from typing import Any, List, Text, Dict, Set, Union
 from onnx import ModelProto, ValueInfoProto
 
 import onnx.checker
 
-def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Any] = {}, output_dim: Dict[int, Any] = {}):
-    # needs to hold: dim-index to be updated MUST be the same for all inputs AND outputs. Assumes dim_value = 0 invalid.
-    # can set arbitrary values for arbitrary dimensions!
+def partial_update_inputs_outputs_dims(model, input_dim: Dict[int, Union[int,str]] = {}, output_dim: Dict[int, Union[int,str]] = {}):
     """
-    The difference to update_inputs_outputs_dims() is that no complete input and output dictionary needs to be provided.
-    also, only the dimension indices need to be provided, no knowledge of exact input names is needed.
+    The difference to update_inputs_outputs_dims() is that only a dictionary containing the to be changed indices needs
+    to be provided.
+
+        Example. if we have the following shape for inputs and outputs:
+                shape(input_1) = (128, 3, 64, 64)
+                shape(input_2) = (128, 4)
+                and shape(output)  = (128, 'c', 5)
+
+                The parameters can be provided as:
+                input_dim = {
+                    0: 'b',
+                    1: 64
+                    }
+
+                output_dim = {
+                    0: -1
+                    }
+
+                producing following result:
+                shape(input_1) = ('b', 64, 64, 64)
+                shape(input_2) = ('b', 64)
+                and shape(output)  = ('output.0', 'c', 5)
+
+
 
     :param model: Onnx Protobuf model to be modified
-    :param input_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique dim_param
-    :param output_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique dim_param
+    :param input_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique string
+    :param output_dim: Dictionary of zero based dimension indices and corresponding values (int or string) to be set. -1 for unique string
     :return: model with modified inputs and outputs
     """
     if not (bool(input_dim) and bool(output_dim)):
